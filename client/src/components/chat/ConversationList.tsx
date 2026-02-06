@@ -26,7 +26,7 @@ export default function ConversationList({ conversations, activeId, onSelect }: 
         </div>
       )}
       {conversations.map((conv) => {
-        const lastMsg = conv.messages[0];
+        const lastMsg = conv.messages?.[0];
         return (
           <button
             key={conv.id}

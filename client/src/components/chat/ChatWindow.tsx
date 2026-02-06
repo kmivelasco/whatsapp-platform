@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { X, Download } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useMessages, useSendMessage, useUpdateMode, useConversation } from '../../hooks/useConversations';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuthStore } from '../../stores/authStore';
@@ -63,15 +64,19 @@ export default function ChatWindow({ conversationId, onClose }: ChatWindowProps)
   };
 
   const handleExport = async (format: 'csv' | 'pdf') => {
-    const response = await api.get(`/export/conversations/${conversationId}?format=${format}`, {
-      responseType: 'blob',
-    });
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `conversation-${conversationId}.${format}`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    try {
+      const response = await api.get(`/export/conversations/${conversationId}?format=${format}`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `conversation-${conversationId}.${format}`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error(`Failed to export as ${format.toUpperCase()}`);
+    }
   };
 
   const canSend = user?.role !== 'VIEWER' && conversation?.mode === 'HUMAN';

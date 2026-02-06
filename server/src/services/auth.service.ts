@@ -55,7 +55,7 @@ export class AuthService {
     return jwt.sign(
       { userId, email, role } as JwtPayload,
       env.JWT_SECRET,
-      { expiresIn: env.JWT_EXPIRES_IN as any }
+      { expiresIn: env.JWT_EXPIRES_IN as string }
     );
   }
 }

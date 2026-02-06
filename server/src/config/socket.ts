@@ -10,6 +10,11 @@ interface AuthPayload {
   role: string;
 }
 
+interface AuthenticatedSocket extends Socket {
+  userId?: string;
+  userRole?: string;
+}
+
 export function initializeSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
@@ -19,23 +24,23 @@ export function initializeSocket(httpServer: HttpServer): Server {
     },
   });
 
-  io.use((socket: Socket, next) => {
+  io.use((socket: AuthenticatedSocket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) {
       return next(new Error('Authentication required'));
     }
     try {
       const payload = jwt.verify(token, env.JWT_SECRET) as AuthPayload;
-      (socket as any).userId = payload.userId;
-      (socket as any).userRole = payload.role;
+      socket.userId = payload.userId;
+      socket.userRole = payload.role;
       next();
     } catch {
       next(new Error('Invalid token'));
     }
   });
 
-  io.on('connection', (socket: Socket) => {
-    console.log(`User connected: ${(socket as any).userId}`);
+  io.on('connection', (socket: AuthenticatedSocket) => {
+    console.log(`User connected: ${socket.userId}`);
 
     socket.on('join_conversation', (conversationId: string) => {
       socket.join(`conversation:${conversationId}`);
@@ -46,7 +51,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
     });
 
     socket.on('disconnect', () => {
-      console.log(`User disconnected: ${(socket as any).userId}`);
+      console.log(`User disconnected: ${socket.userId}`);
     });
   });
 

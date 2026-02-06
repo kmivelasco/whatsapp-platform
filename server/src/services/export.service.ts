@@ -57,7 +57,7 @@ export class ExportService {
         [
           msg.id,
           msg.senderType,
-          `"${msg.content.replace(/"/g, '""')}"`,
+          `"${msg.content.replace(/"/g, '""').replace(/\n/g, ' ').replace(/\r/g, '')}"`,
           msg.timestamp.toISOString(),
           msg.waMessageId ?? '',
         ].join(',')

@@ -132,8 +132,10 @@ export class AnalyticsService {
     const avg = responseTimes.length
       ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
       : 0;
-    const median = responseTimes.length
-      ? responseTimes.sort((a, b) => a - b)[Math.floor(responseTimes.length / 2)]
+    const sorted = [...responseTimes].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length
+      ? sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
       : 0;
 
     return {
