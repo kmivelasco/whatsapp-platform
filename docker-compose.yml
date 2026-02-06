@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: whatsapp_mvp
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./server
+      dockerfile: ../docker/Dockerfile.server
+    ports:
+      - '3001:3001'
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/whatsapp_mvp
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      JWT_EXPIRES_IN: 7d
+      WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_BUSINESS_ACCOUNT_ID: ${WHATSAPP_BUSINESS_ACCOUNT_ID:-}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-verify-token}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_DEFAULT_MODEL: gpt-4o
+      PORT: 3001
+      NODE_ENV: development
+      CORS_ORIGIN: http://localhost:5173
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./server/src:/app/src
+      - ./server/prisma:/app/prisma
+
+  client:
+    build:
+      context: ./client
+      dockerfile: ../docker/Dockerfile.client
+    ports:
+      - '5173:5173'
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+      VITE_WS_URL: http://localhost:3001
+    volumes:
+      - ./client/src:/app/src
+      - ./client/index.html:/app/index.html
+
+volumes:
+  postgres_data:

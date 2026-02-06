@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  AGENT
+  VIEWER
+}
+
+enum ConversationStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum ConversationMode {
+  BOT
+  HUMAN
+}
+
+enum SenderType {
+  CLIENT
+  BOT
+  AGENT
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String         @map("password_hash")
+  name         String
+  role         Role           @default(AGENT)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  conversations Conversation[] @relation("AssignedAgent")
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model Client {
+  id           String         @id @default(cuid())
+  phoneNumber  String         @unique @map("phone_number")
+  name         String?
+  metadata     Json?
+  createdAt    DateTime       @default(now()) @map("created_at")
+  conversations Conversation[]
+
+  @@index([phoneNumber])
+  @@map("clients")
+}
+
+model Conversation {
+  id              String             @id @default(cuid())
+  clientId        String             @map("client_id")
+  client          Client             @relation(fields: [clientId], references: [id])
+  status          ConversationStatus @default(ACTIVE)
+  mode            ConversationMode   @default(BOT)
+  assignedAgentId String?            @map("assigned_agent_id")
+  assignedAgent   User?              @relation("AssignedAgent", fields: [assignedAgentId], references: [id])
+  messages        Message[]
+  tokenUsages     TokenUsage[]
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  @@index([clientId])
+  @@index([status])
+  @@index([assignedAgentId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String     @id @default(cuid())
+  conversationId String     @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderType     SenderType @map("sender_type")
+  content        String
+  waMessageId    String?    @map("wa_message_id")
+  timestamp      DateTime   @default(now())
+  metadata       Json?
+  tokenUsage     TokenUsage?
+
+  @@index([conversationId])
+  @@index([timestamp])
+  @@map("messages")
+}
+
+model TokenUsage {
+  id               String       @id @default(cuid())
+  conversationId   String       @map("conversation_id")
+  conversation     Conversation @relation(fields: [conversationId], references: [id])
+  messageId        String       @unique @map("message_id")
+  message          Message      @relation(fields: [messageId], references: [id])
+  promptTokens     Int          @map("prompt_tokens")
+  completionTokens Int          @map("completion_tokens")
+  totalTokens      Int          @map("total_tokens")
+  model            String
+  estimatedCost    Decimal      @map("estimated_cost") @db.Decimal(10, 6)
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("token_usages")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  resource  String
+  details   Json?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model BotConfig {
+  id           String   @id @default(cuid())
+  name         String
+  systemPrompt String   @map("system_prompt") @db.Text
+  model        String   @default("gpt-4o")
+  temperature  Float    @default(0.7)
+  maxTokens    Int      @default(1024) @map("max_tokens")
+  isActive     Boolean  @default(false) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("bot_configs")
+}
