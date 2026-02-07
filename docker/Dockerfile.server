@@ -12,4 +12,4 @@ COPY . .
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npx tsx prisma/seed.ts && npx tsx watch src/index.ts"]
+CMD ["sh", "-c", "npx prisma db push && npx tsx prisma/seed.ts && npx tsx watch src/index.ts"]
