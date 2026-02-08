@@ -17,7 +17,11 @@
       "Bash(python3:*)",
       "Bash(brew install:*)",
       "Bash(git checkout:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(__NEW_LINE_2ec39ab3d9ac820c__ echo \"\")",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)"
     ]
   }
 }
