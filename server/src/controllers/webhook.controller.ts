@@ -31,9 +31,12 @@ export class WebhookController {
     res.status(200).send('OK');
 
     try {
+      console.log('Webhook received:', JSON.stringify(req.body).substring(0, 500));
       const messages = whatsappService.parseWebhookPayload(req.body);
+      console.log(`Parsed ${messages.length} messages from webhook`);
 
       for (const msg of messages) {
+        console.log(`Processing message: ${msg.messageId} from ${msg.from}`);
         await botPipelineService.processIncomingMessage(msg);
       }
     } catch (err) {

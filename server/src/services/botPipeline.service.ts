@@ -19,7 +19,32 @@ function getBotCredentials(botConfig: BotConfig): WhatsAppCredentials | null {
 }
 
 export class BotPipelineService {
+  // Track processed message IDs to prevent duplicates from Meta webhook retries
+  private processedMessages = new Set<string>();
+
   async processIncomingMessage(incoming: ParsedIncomingMessage) {
+    // Deduplicate: skip if we already processed this message
+    if (this.processedMessages.has(incoming.messageId)) {
+      console.log(`Skipping duplicate message: ${incoming.messageId}`);
+      return null;
+    }
+    this.processedMessages.add(incoming.messageId);
+
+    // Clean up old entries (keep last 1000)
+    if (this.processedMessages.size > 1000) {
+      const entries = Array.from(this.processedMessages);
+      entries.slice(0, entries.length - 1000).forEach(id => this.processedMessages.delete(id));
+    }
+
+    // Also check database for duplicates (in case server restarted)
+    const existingMsg = await prisma.message.findFirst({
+      where: { waMessageId: incoming.messageId },
+    });
+    if (existingMsg) {
+      console.log(`Skipping already-stored message: ${incoming.messageId}`);
+      return null;
+    }
+
     // 1. Find which bot this message is for based on recipient phone number
     const botConfig = await prisma.botConfig.findFirst({
       where: { whatsappPhoneNumberId: incoming.recipientPhoneNumberId },
