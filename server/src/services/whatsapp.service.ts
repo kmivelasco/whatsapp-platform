@@ -34,7 +34,17 @@ export interface ParsedIncomingMessage {
 }
 
 export class WhatsAppService {
+  // Normalize Argentine phone numbers: Meta sends 5491125367148 but expects 541125367148
+  private normalizePhoneNumber(phone: string): string {
+    // Argentina: remove the 9 after country code 54 for mobile numbers
+    if (phone.startsWith('549') && phone.length === 13) {
+      return '54' + phone.slice(3);
+    }
+    return phone;
+  }
+
   async sendMessage(to: string, text: string, credentials: WhatsAppCredentials): Promise<string | null> {
+    const normalizedTo = this.normalizePhoneNumber(to);
     const url = `${WHATSAPP_API_URL}/${credentials.phoneNumberId}/messages`;
 
     const response = await fetch(url, {
@@ -45,7 +55,7 @@ export class WhatsAppService {
       },
       body: JSON.stringify({
         messaging_product: 'whatsapp',
-        to,
+        to: normalizedTo,
         type: 'text',
         text: { body: text },
       }),
