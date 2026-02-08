@@ -12,6 +12,7 @@ import messagesRoutes from './routes/messages.routes';
 import webhookRoutes from './routes/webhook.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import botConfigRoutes from './routes/botConfig.routes';
+import organizationRoutes from './routes/organization.routes';
 import exportRoutes from './routes/export.routes';
 
 const app = express();
@@ -40,6 +41,7 @@ app.use('/api/messages', messagesRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/bot-configs', botConfigRoutes);
+app.use('/api/organizations', organizationRoutes);
 app.use('/api/export', exportRoutes);
 
 // Error handler (must be last)

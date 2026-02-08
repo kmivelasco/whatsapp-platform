@@ -1,18 +1,45 @@
+import { BotConfig } from '@prisma/client';
 import { prisma } from '../config/database';
 import { getIO } from '../config/socket';
 import { openaiService } from './openai.service';
 import { whatsappService, ParsedIncomingMessage } from './whatsapp.service';
 import { conversationService } from './conversation.service';
+import { WhatsAppCredentials } from '../types';
+
+function getBotCredentials(botConfig: BotConfig): WhatsAppCredentials | null {
+  if (!botConfig.whatsappPhoneNumberId || !botConfig.whatsappApiToken) {
+    return null;
+  }
+  return {
+    phoneNumberId: botConfig.whatsappPhoneNumberId,
+    apiToken: botConfig.whatsappApiToken,
+    verifyToken: botConfig.whatsappVerifyToken ?? '',
+    businessAccountId: botConfig.whatsappBusinessAccountId ?? undefined,
+  };
+}
 
 export class BotPipelineService {
   async processIncomingMessage(incoming: ParsedIncomingMessage) {
-    // 1. Find or create client and conversation
+    // 1. Find which bot this message is for based on recipient phone number
+    const botConfig = await prisma.botConfig.findFirst({
+      where: { whatsappPhoneNumberId: incoming.recipientPhoneNumberId },
+      include: { organization: true },
+    });
+
+    if (!botConfig) {
+      console.error(`No bot found for phone number ID: ${incoming.recipientPhoneNumberId}`);
+      return null;
+    }
+
+    // 2. Find or create client and conversation scoped to organization
     const { client, conversation } = await conversationService.findOrCreateForClient(
       incoming.from,
-      incoming.contactName
+      incoming.contactName,
+      botConfig.organizationId,
+      botConfig.id
     );
 
-    // 2. Store incoming message
+    // 3. Store incoming message
     const incomingMsg = await prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -23,13 +50,13 @@ export class BotPipelineService {
       },
     });
 
-    // 3. Update conversation timestamp
+    // 4. Update conversation timestamp
     await prisma.conversation.update({
       where: { id: conversation.id },
       data: { updatedAt: new Date() },
     });
 
-    // 4. Emit real-time event for the new message
+    // 5. Emit real-time event for the new message
     const io = getIO();
     io.to(`conversation:${conversation.id}`).emit('new_message', {
       ...incomingMsg,
@@ -41,22 +68,18 @@ export class BotPipelineService {
       client,
     });
 
-    // 5. If in BOT mode, generate and send AI response
+    // 6. If in BOT mode, generate and send AI response
     if (conversation.mode === 'BOT') {
-      await this.generateBotResponse(conversation.id, client.phoneNumber);
+      await this.generateBotResponse(conversation.id, client.phoneNumber, botConfig);
     }
 
     return { client, conversation, message: incomingMsg };
   }
 
-  async generateBotResponse(conversationId: string, phoneNumber: string) {
-    // Get active bot config
-    const botConfig = await prisma.botConfig.findFirst({
-      where: { isActive: true },
-    });
-
-    if (!botConfig) {
-      console.warn('No active bot config found, skipping auto-response');
+  async generateBotResponse(conversationId: string, phoneNumber: string, botConfig: BotConfig) {
+    const credentials = getBotCredentials(botConfig);
+    if (!credentials) {
+      console.warn('Bot config missing WhatsApp credentials, skipping auto-response');
       return null;
     }
 
@@ -87,8 +110,8 @@ export class BotPipelineService {
       maxTokens: botConfig.maxTokens,
     });
 
-    // Send via WhatsApp
-    const waMessageId = await whatsappService.sendMessage(phoneNumber, aiResult.content);
+    // Send via WhatsApp using bot's own credentials
+    const waMessageId = await whatsappService.sendMessage(phoneNumber, aiResult.content, credentials);
 
     // Store bot response
     const botMessage = await prisma.message.create({
@@ -117,18 +140,24 @@ export class BotPipelineService {
   async sendAgentMessage(conversationId: string, content: string, agentId: string) {
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
-      include: { client: true },
+      include: { client: true, botConfig: true },
     });
 
     if (!conversation) {
       throw new Error('Conversation not found');
     }
 
-    // Send via WhatsApp
-    const waMessageId = await whatsappService.sendMessage(
-      conversation.client.phoneNumber,
-      content
-    );
+    // Get bot credentials for sending via WhatsApp
+    const credentials = conversation.botConfig ? getBotCredentials(conversation.botConfig) : null;
+
+    let waMessageId: string | null = null;
+    if (credentials) {
+      waMessageId = await whatsappService.sendMessage(
+        conversation.client.phoneNumber,
+        content,
+        credentials
+      );
+    }
 
     // Store agent message
     const agentMessage = await prisma.message.create({

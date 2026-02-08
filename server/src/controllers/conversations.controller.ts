@@ -9,12 +9,14 @@ import {
   sendMessageSchema,
 } from '../validators/conversation.validator';
 import { AppError } from '../middleware/errorHandler';
+import { getOrgFilter } from '../middleware/rbac';
 
 export class ConversationsController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
       const filters = conversationFiltersSchema.parse(req.query);
-      const result = await conversationService.list(filters);
+      const organizationId = getOrgFilter(req);
+      const result = await conversationService.list(filters, organizationId);
       res.json(result);
     } catch (err) {
       if (err instanceof Error && err.name === 'ZodError') {

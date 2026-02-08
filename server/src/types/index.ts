@@ -4,6 +4,14 @@ export interface JwtPayload {
   userId: string;
   email: string;
   role: Role;
+  organizationId?: string;
+}
+
+export interface WhatsAppCredentials {
+  phoneNumberId: string;
+  apiToken: string;
+  verifyToken: string;
+  businessAccountId?: string;
 }
 
 declare global {

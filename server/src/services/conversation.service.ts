@@ -15,12 +15,17 @@ interface ConversationFilters {
 }
 
 export class ConversationService {
-  async list(filters: ConversationFilters): Promise<PaginatedResponse<any>> {
+  async list(filters: ConversationFilters, organizationId?: string): Promise<PaginatedResponse<any>> {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
     const skip = (page - 1) * limit;
 
     const where: Prisma.ConversationWhereInput = {};
+
+    // Tenant isolation: non-platform-admins only see their org's conversations
+    if (organizationId) {
+      where.client = { organizationId };
+    }
 
     if (filters.status) where.status = filters.status;
     if (filters.mode) where.mode = filters.mode;
@@ -46,6 +51,7 @@ export class ConversationService {
         where,
         include: {
           client: true,
+          botConfig: { select: { id: true, name: true } },
           assignedAgent: { select: { id: true, name: true, email: true } },
           messages: { orderBy: { timestamp: 'desc' }, take: 1 },
           _count: { select: { messages: true } },
@@ -68,6 +74,7 @@ export class ConversationService {
       where: { id },
       include: {
         client: true,
+        botConfig: { select: { id: true, name: true } },
         assignedAgent: { select: { id: true, name: true, email: true } },
       },
     });
@@ -122,14 +129,20 @@ export class ConversationService {
     });
   }
 
-  async findOrCreateForClient(phoneNumber: string, contactName?: string) {
-    let client = await prisma.client.findUnique({
-      where: { phoneNumber },
+  async findOrCreateForClient(
+    phoneNumber: string,
+    contactName: string | undefined,
+    organizationId: string,
+    botConfigId: string
+  ) {
+    // Find client scoped to organization
+    let client = await prisma.client.findFirst({
+      where: { phoneNumber, organizationId },
     });
 
     if (!client) {
       client = await prisma.client.create({
-        data: { phoneNumber, name: contactName ?? null },
+        data: { phoneNumber, name: contactName ?? null, organizationId },
       });
     } else if (contactName && !client.name) {
       client = await prisma.client.update({
@@ -138,14 +151,15 @@ export class ConversationService {
       });
     }
 
+    // Find active conversation for this client with this specific bot
     let conversation = await prisma.conversation.findFirst({
-      where: { clientId: client.id, status: 'ACTIVE' },
+      where: { clientId: client.id, botConfigId, status: 'ACTIVE' },
       include: { client: true },
     });
 
     if (!conversation) {
       conversation = await prisma.conversation.create({
-        data: { clientId: client.id },
+        data: { clientId: client.id, botConfigId },
         include: { client: true },
       });
     }

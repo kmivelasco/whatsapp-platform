@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
+import { getOrgFilter } from '../middleware/rbac';
 
 export class MessagesController {
   async search(req: Request, res: Response, next: NextFunction) {
@@ -13,7 +15,11 @@ export class MessagesController {
         return res.json({ data: [], pagination: { page: pageNum, limit: limitNum, total: 0, totalPages: 0 } });
       }
 
-      const where = { content: { contains: q as string, mode: 'insensitive' as const } };
+      const orgFilter = getOrgFilter(req);
+      const where: Prisma.MessageWhereInput = {
+        content: { contains: q as string, mode: 'insensitive' },
+        ...(orgFilter ? { conversation: { client: { organizationId: orgFilter } } } : {}),
+      };
 
       const [messages, total] = await Promise.all([
         prisma.message.findMany({

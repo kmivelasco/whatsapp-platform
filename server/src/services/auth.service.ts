@@ -38,22 +38,23 @@ export class AuthService {
       throw new AppError('Invalid credentials', 401);
     }
 
-    const token = this.generateToken(user.id, user.email, user.role);
+    const token = this.generateToken(user.id, user.email, user.role, user.organizationId ?? undefined);
     return {
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
+        organizationId: user.organizationId,
         createdAt: user.createdAt,
       },
       token,
     };
   }
 
-  private generateToken(userId: string, email: string, role: string): string {
+  private generateToken(userId: string, email: string, role: string, organizationId?: string): string {
     return jwt.sign(
-      { userId, email, role } as JwtPayload,
+      { userId, email, role, organizationId } as JwtPayload,
       env.JWT_SECRET,
       { expiresIn: env.JWT_EXPIRES_IN as string }
     );

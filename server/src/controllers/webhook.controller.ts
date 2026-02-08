@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { prisma } from '../config/database';
 import { whatsappService } from '../services/whatsapp.service';
 import { botPipelineService } from '../services/botPipeline.service';
 
@@ -8,7 +9,16 @@ export class WebhookController {
     const token = req.query['hub.verify_token'] as string;
     const challenge = req.query['hub.challenge'] as string;
 
-    const result = whatsappService.verifyWebhook(mode, token, challenge);
+    // Find bot by verify token (we don't know which bot until we check)
+    const botConfig = await prisma.botConfig.findFirst({
+      where: { whatsappVerifyToken: token },
+    });
+
+    if (!botConfig) {
+      return res.status(403).send('Verification failed');
+    }
+
+    const result = whatsappService.verifyWebhook(mode, token, challenge, botConfig.whatsappVerifyToken!);
     if (result) {
       res.status(200).send(result);
     } else {

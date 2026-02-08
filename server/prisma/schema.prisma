@@ -29,29 +29,51 @@ enum SenderType {
   AGENT
 }
 
-model User {
-  id           String         @id @default(cuid())
-  email        String         @unique
-  passwordHash String         @map("password_hash")
-  name         String
-  role         Role           @default(AGENT)
-  createdAt    DateTime       @default(now()) @map("created_at")
-  updatedAt    DateTime       @updatedAt @map("updated_at")
-  conversations Conversation[] @relation("AssignedAgent")
-  auditLogs    AuditLog[]
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
+  users      User[]
+  botConfigs BotConfig[]
+  clients    Client[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  passwordHash   String        @map("password_hash")
+  name           String
+  role           Role          @default(AGENT)
+  organizationId String?       @map("organization_id")
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  conversations  Conversation[] @relation("AssignedAgent")
+  auditLogs      AuditLog[]
+
+  @@index([organizationId])
   @@map("users")
 }
 
 model Client {
-  id           String         @id @default(cuid())
-  phoneNumber  String         @unique @map("phone_number")
-  name         String?
-  metadata     Json?
-  createdAt    DateTime       @default(now()) @map("created_at")
-  conversations Conversation[]
+  id             String       @id @default(cuid())
+  phoneNumber    String       @map("phone_number")
+  name           String?
+  metadata       Json?
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now()) @map("created_at")
+  conversations  Conversation[]
 
+  @@unique([phoneNumber, organizationId])
   @@index([phoneNumber])
+  @@index([organizationId])
   @@map("clients")
 }
 
@@ -59,6 +81,8 @@ model Conversation {
   id              String             @id @default(cuid())
   clientId        String             @map("client_id")
   client          Client             @relation(fields: [clientId], references: [id])
+  botConfigId     String             @map("bot_config_id")
+  botConfig       BotConfig          @relation(fields: [botConfigId], references: [id])
   status          ConversationStatus @default(ACTIVE)
   mode            ConversationMode   @default(BOT)
   assignedAgentId String?            @map("assigned_agent_id")
@@ -69,19 +93,20 @@ model Conversation {
   updatedAt       DateTime           @updatedAt @map("updated_at")
 
   @@index([clientId])
+  @@index([botConfigId])
   @@index([status])
   @@index([assignedAgentId])
   @@map("conversations")
 }
 
 model Message {
-  id             String     @id @default(cuid())
-  conversationId String     @map("conversation_id")
+  id             String       @id @default(cuid())
+  conversationId String       @map("conversation_id")
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  senderType     SenderType @map("sender_type")
+  senderType     SenderType   @map("sender_type")
   content        String
-  waMessageId    String?    @map("wa_message_id")
-  timestamp      DateTime   @default(now())
+  waMessageId    String?      @map("wa_message_id")
+  timestamp      DateTime     @default(now())
   metadata       Json?
   tokenUsage     TokenUsage?
 
@@ -124,15 +149,22 @@ model AuditLog {
 }
 
 model BotConfig {
-  id           String   @id @default(cuid())
-  name         String
-  systemPrompt String   @map("system_prompt") @db.Text
-  model        String   @default("gpt-4o")
-  temperature  Float    @default(0.7)
-  maxTokens    Int      @default(1024) @map("max_tokens")
-  isActive     Boolean  @default(false) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                        String       @id @default(cuid())
+  name                      String
+  systemPrompt              String       @map("system_prompt") @db.Text
+  model                     String       @default("gpt-4o")
+  temperature               Float        @default(0.7)
+  maxTokens                 Int          @default(1024) @map("max_tokens")
+  organizationId            String       @map("organization_id")
+  organization              Organization @relation(fields: [organizationId], references: [id])
+  whatsappPhoneNumberId     String?      @unique @map("whatsapp_phone_number_id")
+  whatsappApiToken          String?      @map("whatsapp_api_token") @db.Text
+  whatsappVerifyToken       String?      @map("whatsapp_verify_token")
+  whatsappBusinessAccountId String?      @map("whatsapp_business_account_id")
+  conversations             Conversation[]
+  createdAt                 DateTime     @default(now()) @map("created_at")
+  updatedAt                 DateTime     @updatedAt @map("updated_at")
 
+  @@index([organizationId])
   @@map("bot_configs")
 }

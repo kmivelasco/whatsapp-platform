@@ -27,10 +27,6 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/whatsapp_mvp
       JWT_SECRET: dev-jwt-secret-change-in-production
       JWT_EXPIRES_IN: 7d
-      WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN}
-      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
-      WHATSAPP_BUSINESS_ACCOUNT_ID: ${WHATSAPP_BUSINESS_ACCOUNT_ID:-}
-      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-verify-token}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_DEFAULT_MODEL: gpt-4o
       PORT: 3001
@@ -50,8 +46,11 @@ services:
     ports:
       - '5173:5173'
     environment:
-      VITE_API_URL: http://localhost:3001/api
-      VITE_WS_URL: http://localhost:3001
+      VITE_API_URL: /api
+      VITE_WS_URL: ''
+      VITE_PROXY_TARGET: http://server:3001
+    depends_on:
+      - server
     volumes:
       - ./client/src:/app/src
       - ./client/index.html:/app/index.html

@@ -1,4 +1,4 @@
-import { env } from '../config/env';
+import { WhatsAppCredentials } from '../types';
 
 const WHATSAPP_API_URL = 'https://graph.facebook.com/v21.0';
 
@@ -30,16 +30,17 @@ export interface ParsedIncomingMessage {
   timestamp: string;
   text: string;
   contactName?: string;
+  recipientPhoneNumberId: string;
 }
 
 export class WhatsAppService {
-  async sendMessage(to: string, text: string): Promise<string | null> {
-    const url = `${WHATSAPP_API_URL}/${env.WHATSAPP_PHONE_NUMBER_ID}/messages`;
+  async sendMessage(to: string, text: string, credentials: WhatsAppCredentials): Promise<string | null> {
+    const url = `${WHATSAPP_API_URL}/${credentials.phoneNumberId}/messages`;
 
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${env.WHATSAPP_API_TOKEN}`,
+        'Authorization': `Bearer ${credentials.apiToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -70,6 +71,8 @@ export class WhatsAppService {
         const value = change.value;
         if (!value.messages) continue;
 
+        const recipientPhoneNumberId = value.metadata.phone_number_id;
+
         for (const msg of value.messages) {
           if (msg.type !== 'text' || !msg.text?.body) continue;
 
@@ -80,6 +83,7 @@ export class WhatsAppService {
             timestamp: msg.timestamp,
             text: msg.text.body,
             contactName: contact?.profile?.name,
+            recipientPhoneNumberId,
           });
         }
       }
@@ -88,8 +92,8 @@ export class WhatsAppService {
     return messages;
   }
 
-  verifyWebhook(mode: string, token: string, challenge: string): string | null {
-    if (mode === 'subscribe' && token === env.WHATSAPP_VERIFY_TOKEN) {
+  verifyWebhook(mode: string, token: string, challenge: string, expectedToken: string): string | null {
+    if (mode === 'subscribe' && token === expectedToken) {
       return challenge;
     }
     return null;

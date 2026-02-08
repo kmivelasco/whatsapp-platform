@@ -4,7 +4,20 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Create default admin user
+  // Create default organization
+  const org = await prisma.organization.upsert({
+    where: { slug: 'default' },
+    update: {},
+    create: {
+      id: 'default-org',
+      name: 'Default Organization',
+      slug: 'default',
+      isActive: true,
+    },
+  });
+  console.log('Organization created:', org.name);
+
+  // Create platform admin (no organization - sees everything)
   const passwordHash = await bcrypt.hash('admin123456', 12);
 
   const admin = await prisma.user.upsert({
@@ -19,7 +32,7 @@ async function main() {
   });
   console.log('Admin user created:', admin.email);
 
-  // Create default bot config
+  // Create default bot config linked to organization
   const botConfig = await prisma.botConfig.upsert({
     where: { id: 'default-bot-config' },
     update: {},
@@ -30,7 +43,7 @@ async function main() {
       model: 'gpt-4o',
       temperature: 0.7,
       maxTokens: 1024,
-      isActive: true,
+      organizationId: org.id,
     },
   });
   console.log('Bot config created:', botConfig.name);

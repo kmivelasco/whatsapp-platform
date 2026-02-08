@@ -7,6 +7,7 @@ const router = Router();
 
 router.use(authenticate);
 
+router.post('/', authorize('ADMIN'), (req, res, next) => usersController.create(req, res, next));
 router.get('/', authorize('ADMIN'), (req, res, next) => usersController.list(req, res, next));
 router.get('/:id', authorize('ADMIN'), (req, res, next) => usersController.getById(req, res, next));
 router.put('/:id', authorize('ADMIN'), (req, res, next) => usersController.update(req, res, next));

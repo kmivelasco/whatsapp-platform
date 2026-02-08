@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { MessageSquare, BarChart3, History, Settings, LogOut } from 'lucide-react';
+import { MessageSquare, BarChart3, History, Settings, LogOut, Building2 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { clsx } from 'clsx';
 
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/', icon: MessageSquare, label: 'Dashboard' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/history', icon: History, label: 'History' },
+  { to: '/organizations', icon: Building2, label: 'Organizations', platformAdminOnly: true },
   { to: '/settings', icon: Settings, label: 'Settings', adminOnly: true },
 ];
 
@@ -25,6 +26,7 @@ export default function Sidebar() {
 
       <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => {
+          if (item.platformAdminOnly && (user?.role !== 'ADMIN' || user?.organizationId)) return null;
           if (item.adminOnly && user?.role !== 'ADMIN') return null;
           return (
             <NavLink

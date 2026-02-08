@@ -10,12 +10,13 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:3001',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_PROXY_TARGET || 'http://localhost:3001',
         ws: true,
+        changeOrigin: true,
       },
     },
   },

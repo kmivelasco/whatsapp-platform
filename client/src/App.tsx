@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
+import OrganizationsPage from './pages/OrganizationsPage';
 import ConversationHistoryPage from './pages/ConversationHistoryPage';
 import Sidebar from './components/layout/Sidebar';
 import ProtectedRoute from './components/layout/ProtectedRoute';
@@ -46,6 +47,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ConversationHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/organizations"
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <OrganizationsPage />
               </ProtectedRoute>
             }
           />

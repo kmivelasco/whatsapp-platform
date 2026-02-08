@@ -13,3 +13,14 @@ export function authorize(...allowedRoles: Role[]) {
     next();
   };
 }
+
+// Platform admin = ADMIN role with no organizationId (sees everything)
+export function isPlatformAdmin(req: Request): boolean {
+  return req.user?.role === 'ADMIN' && !req.user?.organizationId;
+}
+
+// Get the organizationId to filter by (undefined for platform admins = no filter)
+export function getOrgFilter(req: Request): string | undefined {
+  if (isPlatformAdmin(req)) return undefined;
+  return req.user?.organizationId;
+}

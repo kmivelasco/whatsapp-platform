@@ -2,13 +2,19 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database';
 import { createBotConfigSchema, updateBotConfigSchema } from '../validators/botConfig.validator';
 import { AppError } from '../middleware/errorHandler';
+import { getOrgFilter, isPlatformAdmin } from '../middleware/rbac';
 
 type IdParams = { id: string };
 
 export class BotConfigController {
-  async list(_req: Request, res: Response, next: NextFunction) {
+  async list(req: Request, res: Response, next: NextFunction) {
     try {
+      const orgFilter = getOrgFilter(req);
+      const where = orgFilter ? { organizationId: orgFilter } : {};
+
       const configs = await prisma.botConfig.findMany({
+        where,
+        include: { organization: { select: { id: true, name: true, slug: true } } },
         orderBy: { createdAt: 'desc' },
       });
       res.json(configs);
@@ -21,8 +27,16 @@ export class BotConfigController {
     try {
       const config = await prisma.botConfig.findUnique({
         where: { id: req.params.id },
+        include: { organization: { select: { id: true, name: true, slug: true } } },
       });
       if (!config) return next(new AppError('Bot config not found', 404));
+
+      // Tenant check
+      const orgFilter = getOrgFilter(req);
+      if (orgFilter && config.organizationId !== orgFilter) {
+        return next(new AppError('Bot config not found', 404));
+      }
+
       res.json(config);
     } catch (err) {
       next(err);
@@ -33,15 +47,29 @@ export class BotConfigController {
     try {
       const input = createBotConfigSchema.parse(req.body);
 
-      // If setting as active, deactivate others
-      if (input.isActive) {
-        await prisma.botConfig.updateMany({
-          where: { isActive: true },
-          data: { isActive: false },
-        });
+      // Platform admin must specify organizationId; org users use their own
+      let organizationId = input.organizationId;
+      if (!isPlatformAdmin(req)) {
+        organizationId = req.user!.organizationId!;
+      }
+      if (!organizationId) {
+        return next(new AppError('organizationId is required', 400));
       }
 
-      const config = await prisma.botConfig.create({ data: input });
+      const config = await prisma.botConfig.create({
+        data: {
+          name: input.name,
+          systemPrompt: input.systemPrompt,
+          model: input.model,
+          temperature: input.temperature,
+          maxTokens: input.maxTokens,
+          organizationId,
+          whatsappPhoneNumberId: input.whatsappPhoneNumberId,
+          whatsappApiToken: input.whatsappApiToken,
+          whatsappVerifyToken: input.whatsappVerifyToken,
+          whatsappBusinessAccountId: input.whatsappBusinessAccountId,
+        },
+      });
       res.status(201).json(config);
     } catch (err) {
       if (err instanceof Error && err.name === 'ZodError') {
@@ -55,11 +83,13 @@ export class BotConfigController {
     try {
       const input = updateBotConfigSchema.parse(req.body);
 
-      if (input.isActive) {
-        await prisma.botConfig.updateMany({
-          where: { isActive: true, NOT: { id: req.params.id } },
-          data: { isActive: false },
-        });
+      // Tenant check
+      const existing = await prisma.botConfig.findUnique({ where: { id: req.params.id } });
+      if (!existing) return next(new AppError('Bot config not found', 404));
+
+      const orgFilter = getOrgFilter(req);
+      if (orgFilter && existing.organizationId !== orgFilter) {
+        return next(new AppError('Bot config not found', 404));
       }
 
       const config = await prisma.botConfig.update({
@@ -77,6 +107,14 @@ export class BotConfigController {
 
   async delete(req: Request<IdParams>, res: Response, next: NextFunction) {
     try {
+      const existing = await prisma.botConfig.findUnique({ where: { id: req.params.id } });
+      if (!existing) return next(new AppError('Bot config not found', 404));
+
+      const orgFilter = getOrgFilter(req);
+      if (orgFilter && existing.organizationId !== orgFilter) {
+        return next(new AppError('Bot config not found', 404));
+      }
+
       await prisma.botConfig.delete({ where: { id: req.params.id } });
       res.status(204).send();
     } catch (err) {
