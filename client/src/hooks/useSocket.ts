@@ -4,6 +4,35 @@ import { useAuthStore } from '../stores/authStore';
 
 const WS_URL = import.meta.env.VITE_WS_URL || '';
 
+// Singleton socket instance to avoid multiple connections
+let globalSocket: Socket | null = null;
+let socketRefCount = 0;
+
+function getSocket(token: string): Socket {
+  if (!globalSocket || globalSocket.disconnected) {
+    globalSocket = io(WS_URL, {
+      auth: { token },
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+    });
+
+    globalSocket.on('connect', () => {
+      console.log('Socket connected');
+    });
+
+    globalSocket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+    });
+
+    globalSocket.on('connect_error', (err) => {
+      console.log('Socket connection error:', err.message);
+    });
+  }
+  return globalSocket;
+}
+
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
   const token = useAuthStore((s) => s.token);
@@ -11,23 +40,17 @@ export function useSocket() {
   useEffect(() => {
     if (!token) return;
 
-    const socket = io(WS_URL, {
-      auth: { token },
-      transports: ['websocket', 'polling'],
-    });
-
-    socket.on('connect', () => {
-      console.log('Socket connected');
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected');
-    });
-
+    const socket = getSocket(token);
     socketRef.current = socket;
+    socketRefCount++;
 
     return () => {
-      socket.disconnect();
+      socketRefCount--;
+      if (socketRefCount <= 0) {
+        socket.disconnect();
+        globalSocket = null;
+        socketRefCount = 0;
+      }
       socketRef.current = null;
     };
   }, [token]);

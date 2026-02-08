@@ -15,7 +15,9 @@
       "Bash(curl:*)",
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJjbWxib2s1Z3YwMDAwcXIyamluOHN2ZnI2IiwiZW1haWwiOiJhZG1pbkB3aGF0c2FwcC1tdnAuY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzcwNDMwNDc4LCJleHAiOjE3NzEwMzUyNzh9.f8ahNwhJ_sYPyZt_H5DnWpMC5uO5UkxWyQRu6JfdiAI\")",
       "Bash(python3:*)",
-      "Bash(brew install:*)"
+      "Bash(brew install:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)"
     ]
   }
 }
