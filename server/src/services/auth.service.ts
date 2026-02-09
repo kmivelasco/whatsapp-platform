@@ -53,10 +53,11 @@ export class AuthService {
   }
 
   private generateToken(userId: string, email: string, role: string, organizationId?: string): string {
+    const options: jwt.SignOptions = { expiresIn: env.JWT_EXPIRES_IN as string };
     return jwt.sign(
       { userId, email, role, organizationId } as JwtPayload,
       env.JWT_SECRET,
-      { expiresIn: env.JWT_EXPIRES_IN as string }
+      options
     );
   }
 }
