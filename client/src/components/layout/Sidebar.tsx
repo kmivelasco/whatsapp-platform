@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { MessageSquare, BarChart3, History, Settings, LogOut, Building2 } from 'lucide-react';
+import { MessageSquare, BarChart3, History, Settings, LogOut, Building2, CreditCard } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { clsx } from 'clsx';
 
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/', icon: MessageSquare, label: 'Dashboard' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/history', icon: History, label: 'History' },
+  { to: '/billing', icon: CreditCard, label: 'Plan' },
   { to: '/organizations', icon: Building2, label: 'Organizations', platformAdminOnly: true },
   { to: '/settings', icon: Settings, label: 'Settings', adminOnly: true },
 ];
@@ -17,7 +18,7 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-800">WA Dashboard</h1>
+        <h1 className="text-xl font-bold text-gray-800"><span className="text-blue-600">Spark</span> CRM</h1>
         <p className="text-sm text-gray-500 mt-1">{user?.name}</p>
         <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
           {user?.role}
