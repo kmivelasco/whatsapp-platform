@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Crown, CheckCircle2, Loader2, ArrowRight, Shield, Settings, AlertTriangle, Zap } from 'lucide-react';
+import { Crown, CheckCircle2, Loader2, ArrowRight, Shield, AlertTriangle, Zap, XCircle } from 'lucide-react';
 import api from '../api/client';
 
 interface SubscriptionData {
   plan: string;
   trialEndsAt: string | null;
   currentPeriodEnd: string | null;
-  hasStripeSubscription: boolean;
+  hasSubscription: boolean;
 }
 
 export default function BillingPage() {
@@ -15,7 +15,7 @@ export default function BillingPage() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
-  const [managingPortal, setManagingPortal] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
 
   useEffect(() => {
@@ -23,7 +23,8 @@ export default function BillingPage() {
   }, []);
 
   useEffect(() => {
-    if (searchParams.get('session_id')) {
+    const status = searchParams.get('status');
+    if (status === 'approved') {
       setSuccessMessage(true);
       loadSubscription();
       setTimeout(() => setSuccessMessage(false), 5000);
@@ -32,7 +33,7 @@ export default function BillingPage() {
 
   async function loadSubscription() {
     try {
-      const { data } = await api.get('/stripe/subscription');
+      const { data } = await api.get('/rebill/subscription');
       setSubscription(data);
     } catch (error) {
       console.error('Error loading subscription:', error);
@@ -44,7 +45,7 @@ export default function BillingPage() {
   async function handleSubscribe() {
     setSubscribing(true);
     try {
-      const { data } = await api.post('/stripe/checkout');
+      const { data } = await api.post('/rebill/checkout');
       if (data.url) {
         window.location.href = data.url;
       }
@@ -54,16 +55,17 @@ export default function BillingPage() {
     }
   }
 
-  async function handleManageSubscription() {
-    setManagingPortal(true);
+  async function handleCancelSubscription() {
+    if (!confirm('Estas seguro de que queres cancelar tu suscripcion?')) return;
+
+    setCanceling(true);
     try {
-      const { data } = await api.post('/stripe/portal');
-      if (data.url) {
-        window.location.href = data.url;
-      }
+      await api.post('/rebill/cancel');
+      await loadSubscription();
     } catch (error) {
-      alert('Error al abrir el portal');
-      setManagingPortal(false);
+      alert('Error al cancelar la suscripcion');
+    } finally {
+      setCanceling(false);
     }
   }
 
@@ -182,16 +184,16 @@ export default function BillingPage() {
               Plan activo
             </div>
             <button
-              onClick={handleManageSubscription}
-              disabled={managingPortal}
+              onClick={handleCancelSubscription}
+              disabled={canceling}
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 py-3 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
-              {managingPortal ? (
+              {canceling ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <Settings className="h-4 w-4" />
-                  Gestionar suscripcion
+                  <XCircle className="h-4 w-4" />
+                  Cancelar suscripcion
                 </>
               )}
             </button>
@@ -218,9 +220,9 @@ export default function BillingPage() {
       <div className="mt-6 flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4">
         <Shield className="mt-0.5 h-5 w-5 text-blue-500 shrink-0" />
         <div>
-          <p className="text-sm font-medium text-gray-900">Pago seguro con Stripe</p>
+          <p className="text-sm font-medium text-gray-900">Pago seguro</p>
           <p className="text-xs text-gray-500">
-            Tus datos de pago son procesados directamente por Stripe. Nunca almacenamos tu informacion financiera. Podes cancelar en cualquier momento.
+            Tus datos de pago son procesados de forma segura. Nunca almacenamos tu informacion financiera. Podes cancelar en cualquier momento.
           </p>
         </div>
       </div>

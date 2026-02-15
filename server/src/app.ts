@@ -14,16 +14,13 @@ import analyticsRoutes from './routes/analytics.routes';
 import botConfigRoutes from './routes/botConfig.routes';
 import organizationRoutes from './routes/organization.routes';
 import exportRoutes from './routes/export.routes';
-import stripeRoutes from './routes/stripe.routes';
+import rebillRoutes from './routes/rebill.routes';
 
 const app = express();
 
 // Security
 app.use(helmet());
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
-
-// Stripe webhook needs raw body BEFORE json parser
-app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -47,7 +44,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/bot-configs', botConfigRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/export', exportRoutes);
-app.use('/api/stripe', stripeRoutes);
+app.use('/api/rebill', rebillRoutes);
 
 // Error handler (must be last)
 app.use(errorHandler);

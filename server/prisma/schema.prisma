@@ -34,8 +34,8 @@ model Organization {
   name                 String
   slug                 String    @unique
   isActive             Boolean   @default(true) @map("is_active")
-  stripeCustomerId     String?   @map("stripe_customer_id")
-  stripeSubscriptionId String?   @map("stripe_subscription_id")
+  rebillCustomerId     String?   @map("rebill_customer_id")
+  rebillSubscriptionId String?   @map("rebill_subscription_id")
   plan                 String    @default("trial")
   trialEndsAt          DateTime? @map("trial_ends_at")
   currentPeriodEnd     DateTime? @map("current_period_end")
