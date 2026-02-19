@@ -9,3 +9,4 @@ build/
 coverage/
 .prisma/
 *.tsbuildinfo
+.wa-sessions/

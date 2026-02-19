@@ -3,6 +3,7 @@ import { prisma } from '../config/database';
 import { getIO } from '../config/socket';
 import { openaiService } from './openai.service';
 import { whatsappService, ParsedIncomingMessage } from './whatsapp.service';
+import { whatsappWebService } from './whatsappWeb.service';
 import { conversationService } from './conversation.service';
 import { WhatsAppCredentials } from '../types';
 
@@ -172,16 +173,27 @@ export class BotPipelineService {
       throw new Error('Conversation not found');
     }
 
-    // Get bot credentials for sending via WhatsApp
+    // Try sending via WhatsApp — Cloud API first, then Web fallback
     const credentials = conversation.botConfig ? getBotCredentials(conversation.botConfig) : null;
 
     let waMessageId: string | null = null;
     if (credentials) {
+      // Send via Cloud API
       waMessageId = await whatsappService.sendMessage(
         conversation.client.phoneNumber,
         content,
         credentials
       );
+    } else if (conversation.botConfig) {
+      // Try WhatsApp Web connection
+      const webSession = whatsappWebService.getSession(conversation.botConfig.id);
+      if (webSession && webSession.status === 'connected') {
+        waMessageId = await whatsappWebService.sendMessage(
+          conversation.botConfig.id,
+          conversation.client.phoneNumber,
+          content
+        );
+      }
     }
 
     // Store agent message

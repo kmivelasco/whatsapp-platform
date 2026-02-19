@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../api/client';
 import Header from '../components/layout/Header';
-import { Plus, Trash2, Users, Bot, UserPlus, X } from 'lucide-react';
+import { Plus, Trash2, Users, Bot, UserPlus, X, Smartphone } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import WhatsAppWebConnect from '../components/settings/WhatsAppWebConnect';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'bot' | 'users'>('bot');
+  const [activeTab, setActiveTab] = useState<'bot' | 'whatsapp' | 'users'>('bot');
 
   return (
     <div className="flex flex-col h-full">
@@ -23,6 +24,15 @@ export default function SettingsPage() {
             Bot Config
           </button>
           <button
+            onClick={() => setActiveTab('whatsapp')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'whatsapp' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
+            }`}
+          >
+            <Smartphone className="w-4 h-4" />
+            WhatsApp
+          </button>
+          <button
             onClick={() => setActiveTab('users')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
               activeTab === 'users' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
@@ -35,8 +45,72 @@ export default function SettingsPage() {
       </Header>
 
       <div className="flex-1 overflow-y-auto p-6">
-        {activeTab === 'bot' ? <BotConfigTab /> : <UsersTab />}
+        {activeTab === 'bot' && <BotConfigTab />}
+        {activeTab === 'whatsapp' && <WhatsAppTab />}
+        {activeTab === 'users' && <UsersTab />}
       </div>
+    </div>
+  );
+}
+
+function WhatsAppTab() {
+  const { data: configs, isLoading } = useQuery({
+    queryKey: ['bot-configs'],
+    queryFn: async () => { const { data } = await api.get('/bot-configs'); return data; },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!configs || configs.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Smartphone className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+        <h3 className="text-lg font-medium text-gray-700">No hay bots configurados</h3>
+        <p className="text-sm text-gray-500 mt-1">
+          Primero creá un bot en la pestaña "Bot Config" y después conectá WhatsApp acá.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium text-gray-900">Conexión WhatsApp</h3>
+        <p className="text-sm text-gray-500 mt-1">
+          Conectá tu número de WhatsApp escaneando el QR code. Tu número sigue funcionando normalmente en el celular.
+          Los mensajes que recibas se procesarán con el bot de IA configurado.
+        </p>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex gap-3">
+          <div className="shrink-0">
+            <Smartphone className="w-5 h-5 text-blue-600 mt-0.5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-blue-800">Dos formas de conectar WhatsApp</h4>
+            <div className="mt-2 text-xs text-blue-700 space-y-1">
+              <p><strong>QR Code (WhatsApp Web)</strong> — Escaneá con tu celular. Rápido, usa tu número actual. Ideal para probar.</p>
+              <p><strong>Cloud API (Meta)</strong> — Configurá en la pestaña Bot Config con las credenciales de Meta Developers. Ideal para producción.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {configs.map((config: any) => (
+        <WhatsAppWebConnect
+          key={config.id}
+          botConfigId={config.id}
+          botName={config.name}
+        />
+      ))}
     </div>
   );
 }
@@ -60,7 +134,11 @@ function BotConfigTab() {
 
   const { data: organizations } = useQuery({
     queryKey: ['organizations'],
-    queryFn: async () => { const { data } = await api.get('/organizations'); return data.data; },
+    queryFn: async () => {
+      const { data } = await api.get('/organizations');
+      // Handle both { data: [...] } and direct array responses
+      return Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+    },
     enabled: isPlatformAdmin,
   });
 
@@ -244,7 +322,10 @@ function UsersTab() {
 
   const { data: organizations } = useQuery({
     queryKey: ['organizations'],
-    queryFn: async () => { const { data } = await api.get('/organizations'); return data.data; },
+    queryFn: async () => {
+      const { data } = await api.get('/organizations');
+      return Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+    },
     enabled: isPlatformAdmin,
   });
 
