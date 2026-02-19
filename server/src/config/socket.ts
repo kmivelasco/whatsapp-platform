@@ -18,7 +18,7 @@ interface AuthenticatedSocket extends Socket {
 export function initializeSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
-      origin: env.CORS_ORIGIN,
+      origin: env.NODE_ENV === 'production' ? true : env.CORS_ORIGIN,
       methods: ['GET', 'POST'],
       credentials: true,
     },

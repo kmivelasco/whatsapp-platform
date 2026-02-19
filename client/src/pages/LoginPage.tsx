@@ -32,8 +32,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">WhatsApp MVP</h1>
-          <p className="text-gray-500 mt-1">{isRegister ? 'Create your account' : 'Sign in to your dashboard'}</p>
+          <h1 className="text-2xl font-bold text-gray-900"><span className="text-blue-600">Spark</span> CRM</h1>
+          <p className="text-gray-500 mt-1">{isRegister ? 'Creá tu cuenta' : 'Iniciá sesión'}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -88,11 +88,6 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {!isRegister && (
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 text-center">
-            Default admin: admin@whatsapp-mvp.com / admin123456
-          </div>
-        )}
       </div>
     </div>
   );

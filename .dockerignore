@@ -1,0 +1,16 @@
+node_modules
+server/node_modules
+client/node_modules
+server/dist
+client/dist
+.wa-sessions
+.git
+.gitignore
+*.md
+docker/
+docker-compose.yml
+.env
+.env.*
+.DS_Store
+coverage
+*.log

@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
 import { env } from './config/env';
 import { apiLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
@@ -20,8 +21,21 @@ import whatsappWebRoutes from './routes/whatsappWeb.routes';
 const app = express();
 
 // Security
-app.use(helmet());
-app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+app.use(helmet({
+  contentSecurityPolicy: env.NODE_ENV === 'production' ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+    },
+  } : false,
+}));
+app.use(cors({
+  origin: env.NODE_ENV === 'production' ? true : env.CORS_ORIGIN,
+  credentials: true,
+}));
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
@@ -47,6 +61,17 @@ app.use('/api/organizations', organizationRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/rebill', rebillRoutes);
 app.use('/api/wa-web', whatsappWebRoutes);
+
+// Serve static client files in production
+if (env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientBuildPath));
+
+  // SPA fallback - serve index.html for all non-API routes
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+}
 
 // Error handler (must be last)
 app.use(errorHandler);
