@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sparkcrm-db
+    restart: always
+    environment:
+      POSTGRES_USER: sparkcrm
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-SparkCRM2026!SecurePass}
+      POSTGRES_DB: sparkcrm
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sparkcrm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sparkcrm-app
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://sparkcrm:${DB_PASSWORD:-SparkCRM2026!SecurePass}@postgres:5432/sparkcrm
+      JWT_SECRET: ${JWT_SECRET:-spark-crm-prod-jwt-change-this-to-random}
+      JWT_EXPIRES_IN: 7d
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_DEFAULT_MODEL: gpt-4o
+      CORS_ORIGIN: https://plataformabot.spark101.tech
+      APP_URL: https://plataformabot.spark101.tech
+      REBILL_API_KEY: ${REBILL_API_KEY}
+      REBILL_PLAN_ID: ${REBILL_PLAN_ID}
+    volumes:
+      - wa_sessions:/app/.wa-sessions
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: sparkcrm-proxy
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  wa_sessions:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,10 @@
+plataformabot.spark101.tech {
+    reverse_proxy app:3001
+
+    # WebSocket support for Socket.io
+    @websocket {
+        header Connection *Upgrade*
+        header Upgrade websocket
+    }
+    reverse_proxy @websocket app:3001
+}
