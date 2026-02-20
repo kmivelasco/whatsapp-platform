@@ -1,5 +1,5 @@
 # ---- Build stage ----
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -23,11 +23,12 @@ RUN cd server && npx prisma generate
 # Build server (TypeScript → dist/)
 RUN npm run build -w server
 
-# Build client (Vite → dist/)
+# Build client (Vite → dist/) with limited memory
+ENV NODE_OPTIONS="--max-old-space-size=1024"
 RUN npm run build -w client
 
 # ---- Production stage ----
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 
 WORKDIR /app
 
@@ -59,5 +60,5 @@ ENV PORT=3001
 
 EXPOSE 3001
 
-# Run migrations, seed, and start server
+# Run migrations and start server
 CMD ["sh", "-c", "cd server && npx prisma db push --skip-generate && node dist/index.js"]
