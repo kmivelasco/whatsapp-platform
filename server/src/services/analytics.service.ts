@@ -9,8 +9,28 @@ interface AnalyticsQuery {
 }
 
 export class AnalyticsService {
-  async getTokenUsage(query: AnalyticsQuery) {
-    const where: Prisma.TokenUsageWhereInput = {};
+  // Build org filter for TokenUsage (goes through conversation → client → organization)
+  private orgFilterTokenUsage(organizationId?: string): Prisma.TokenUsageWhereInput {
+    if (!organizationId) return {};
+    return { conversation: { client: { organizationId } } };
+  }
+
+  // Build org filter for Message (goes through conversation → client → organization)
+  private orgFilterMessage(organizationId?: string): Prisma.MessageWhereInput {
+    if (!organizationId) return {};
+    return { conversation: { client: { organizationId } } };
+  }
+
+  // Build org filter for Conversation (goes through client → organization)
+  private orgFilterConversation(organizationId?: string): Prisma.ConversationWhereInput {
+    if (!organizationId) return {};
+    return { client: { organizationId } };
+  }
+
+  async getTokenUsage(query: AnalyticsQuery, organizationId?: string) {
+    const where: Prisma.TokenUsageWhereInput = {
+      ...this.orgFilterTokenUsage(organizationId),
+    };
 
     if (query.conversationId) where.conversationId = query.conversationId;
     if (query.from || query.to) {
@@ -40,8 +60,10 @@ export class AnalyticsService {
     return { grouped, totals };
   }
 
-  async getCostBreakdown(query: AnalyticsQuery) {
-    const where: Prisma.TokenUsageWhereInput = {};
+  async getCostBreakdown(query: AnalyticsQuery, organizationId?: string) {
+    const where: Prisma.TokenUsageWhereInput = {
+      ...this.orgFilterTokenUsage(organizationId),
+    };
     if (query.from || query.to) {
       where.createdAt = {};
       if (query.from) where.createdAt.gte = new Date(query.from);
@@ -70,8 +92,10 @@ export class AnalyticsService {
     }));
   }
 
-  async getMessageVolume(query: AnalyticsQuery) {
-    const where: Prisma.MessageWhereInput = {};
+  async getMessageVolume(query: AnalyticsQuery, organizationId?: string) {
+    const where: Prisma.MessageWhereInput = {
+      ...this.orgFilterMessage(organizationId),
+    };
     if (query.from || query.to) {
       where.timestamp = {};
       if (query.from) where.timestamp.gte = new Date(query.from);
@@ -101,8 +125,10 @@ export class AnalyticsService {
     }));
   }
 
-  async getResponseTimes(query: AnalyticsQuery) {
-    const where: Prisma.ConversationWhereInput = {};
+  async getResponseTimes(query: AnalyticsQuery, organizationId?: string) {
+    const where: Prisma.ConversationWhereInput = {
+      ...this.orgFilterConversation(organizationId),
+    };
     if (query.from || query.to) {
       where.createdAt = {};
       if (query.from) where.createdAt.gte = new Date(query.from);
@@ -145,13 +171,18 @@ export class AnalyticsService {
     };
   }
 
-  async getSummary() {
+  async getSummary(organizationId?: string) {
+    const convWhere = this.orgFilterConversation(organizationId);
+    const msgWhere = this.orgFilterMessage(organizationId);
+    const tokenWhere = this.orgFilterTokenUsage(organizationId);
+
     const [totalConversations, activeConversations, totalMessages, totalTokenUsage] =
       await Promise.all([
-        prisma.conversation.count(),
-        prisma.conversation.count({ where: { status: 'ACTIVE' } }),
-        prisma.message.count(),
+        prisma.conversation.count({ where: convWhere }),
+        prisma.conversation.count({ where: { ...convWhere, status: 'ACTIVE' } }),
+        prisma.message.count({ where: msgWhere }),
         prisma.tokenUsage.aggregate({
+          where: tokenWhere,
           _sum: { totalTokens: true, estimatedCost: true },
         }),
       ]);

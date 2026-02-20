@@ -29,8 +29,13 @@ export class ConversationsController {
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const organizationId = getOrgFilter(req);
       const conversation = await conversationService.getById(id);
       if (!conversation) return next(new AppError('Conversation not found', 404));
+      // Tenant isolation: verify conversation belongs to user's org
+      if (organizationId && conversation.client?.organizationId !== organizationId) {
+        return next(new AppError('Conversation not found', 404));
+      }
       res.json(conversation);
     } catch (err) {
       next(err);
@@ -40,6 +45,14 @@ export class ConversationsController {
   async getMessages(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const organizationId = getOrgFilter(req);
+      // Tenant isolation: verify conversation belongs to user's org
+      if (organizationId) {
+        const conversation = await conversationService.getById(id);
+        if (!conversation || conversation.client?.organizationId !== organizationId) {
+          return next(new AppError('Conversation not found', 404));
+        }
+      }
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const result = await conversationService.getMessages(id, page, limit);
@@ -52,6 +65,14 @@ export class ConversationsController {
   async sendMessage(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const organizationId = getOrgFilter(req);
+      // Tenant isolation
+      if (organizationId) {
+        const conversation = await conversationService.getById(id);
+        if (!conversation || conversation.client?.organizationId !== organizationId) {
+          return next(new AppError('Conversation not found', 404));
+        }
+      }
       const { content } = sendMessageSchema.parse(req.body);
       const message = await botPipelineService.sendAgentMessage(id, content, req.user!.userId);
       res.status(201).json(message);
@@ -66,6 +87,13 @@ export class ConversationsController {
   async updateMode(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const organizationId = getOrgFilter(req);
+      if (organizationId) {
+        const conversation = await conversationService.getById(id);
+        if (!conversation || conversation.client?.organizationId !== organizationId) {
+          return next(new AppError('Conversation not found', 404));
+        }
+      }
       const { mode } = updateModeSchema.parse(req.body);
       const conversation = await conversationService.updateMode(id, mode);
       res.json(conversation);
@@ -77,6 +105,13 @@ export class ConversationsController {
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const organizationId = getOrgFilter(req);
+      if (organizationId) {
+        const conversation = await conversationService.getById(id);
+        if (!conversation || conversation.client?.organizationId !== organizationId) {
+          return next(new AppError('Conversation not found', 404));
+        }
+      }
       const { status } = updateStatusSchema.parse(req.body);
       const conversation = await conversationService.updateStatus(id, status);
       res.json(conversation);
@@ -88,6 +123,13 @@ export class ConversationsController {
   async assignAgent(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const organizationId = getOrgFilter(req);
+      if (organizationId) {
+        const conversation = await conversationService.getById(id);
+        if (!conversation || conversation.client?.organizationId !== organizationId) {
+          return next(new AppError('Conversation not found', 404));
+        }
+      }
       const { agentId } = assignAgentSchema.parse(req.body);
       const conversation = await conversationService.assignAgent(id, agentId);
       res.json(conversation);

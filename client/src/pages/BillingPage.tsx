@@ -149,12 +149,12 @@ export default function BillingPage() {
       <div className="rounded-xl border border-blue-200 bg-white p-8 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-xl font-bold text-gray-900">WhatsApp CRM Pro</h3>
+            <h3 className="text-xl font-bold text-gray-900">Spark CRM Pro</h3>
             <p className="text-sm text-gray-500">Todo lo que necesitas para gestionar tus clientes</p>
           </div>
           <div className="text-right">
-            <span className="text-4xl font-bold text-blue-600">$150</span>
-            <span className="text-gray-400"> USD/mes</span>
+            <span className="text-4xl font-bold text-blue-600">$150.000</span>
+            <span className="text-gray-400"> ARS/mes</span>
             <p className="text-xs text-gray-400 mt-1">7 dias de prueba gratis</p>
           </div>
         </div>

@@ -33,7 +33,7 @@ app.use(helmet({
   } : false,
 }));
 app.use(cors({
-  origin: env.NODE_ENV === 'production' ? true : env.CORS_ORIGIN,
+  origin: env.CORS_ORIGIN || true,
   credentials: true,
 }));
 

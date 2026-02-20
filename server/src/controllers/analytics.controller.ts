@@ -2,12 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { analyticsService } from '../services/analytics.service';
 import { analyticsQuerySchema } from '../validators/analytics.validator';
 import { AppError } from '../middleware/errorHandler';
+import { getOrgFilter } from '../middleware/rbac';
 
 export class AnalyticsController {
   async getTokenUsage(req: Request, res: Response, next: NextFunction) {
     try {
       const query = analyticsQuerySchema.parse(req.query);
-      const result = await analyticsService.getTokenUsage(query);
+      const organizationId = getOrgFilter(req);
+      const result = await analyticsService.getTokenUsage(query, organizationId);
       res.json(result);
     } catch (err) {
       if (err instanceof Error && err.name === 'ZodError') {
@@ -20,7 +22,8 @@ export class AnalyticsController {
   async getCostBreakdown(req: Request, res: Response, next: NextFunction) {
     try {
       const query = analyticsQuerySchema.parse(req.query);
-      const result = await analyticsService.getCostBreakdown(query);
+      const organizationId = getOrgFilter(req);
+      const result = await analyticsService.getCostBreakdown(query, organizationId);
       res.json(result);
     } catch (err) {
       next(err);
@@ -30,7 +33,8 @@ export class AnalyticsController {
   async getMessageVolume(req: Request, res: Response, next: NextFunction) {
     try {
       const query = analyticsQuerySchema.parse(req.query);
-      const result = await analyticsService.getMessageVolume(query);
+      const organizationId = getOrgFilter(req);
+      const result = await analyticsService.getMessageVolume(query, organizationId);
       res.json(result);
     } catch (err) {
       next(err);
@@ -40,16 +44,18 @@ export class AnalyticsController {
   async getResponseTimes(req: Request, res: Response, next: NextFunction) {
     try {
       const query = analyticsQuerySchema.parse(req.query);
-      const result = await analyticsService.getResponseTimes(query);
+      const organizationId = getOrgFilter(req);
+      const result = await analyticsService.getResponseTimes(query, organizationId);
       res.json(result);
     } catch (err) {
       next(err);
     }
   }
 
-  async getSummary(_req: Request, res: Response, next: NextFunction) {
+  async getSummary(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await analyticsService.getSummary();
+      const organizationId = getOrgFilter(req);
+      const result = await analyticsService.getSummary(organizationId);
       res.json(result);
     } catch (err) {
       next(err);

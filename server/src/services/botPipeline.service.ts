@@ -104,8 +104,14 @@ export class BotPipelineService {
 
   async generateBotResponse(conversationId: string, phoneNumber: string, botConfig: BotConfig) {
     const credentials = getBotCredentials(botConfig);
-    if (!credentials) {
-      console.warn('Bot config missing WhatsApp credentials, skipping auto-response');
+
+    // Check if we have any way to send (Cloud API or WhatsApp Web)
+    const webSession = whatsappWebService.getSession(botConfig.id);
+    const hasCloudAPI = !!credentials;
+    const hasWebSession = webSession && webSession.status === 'connected';
+
+    if (!hasCloudAPI && !hasWebSession) {
+      console.warn('No WhatsApp sending method available (no Cloud API credentials and no Web session)');
       return null;
     }
 
@@ -136,8 +142,13 @@ export class BotPipelineService {
       maxTokens: botConfig.maxTokens,
     });
 
-    // Send via WhatsApp using bot's own credentials
-    const waMessageId = await whatsappService.sendMessage(phoneNumber, aiResult.content, credentials);
+    // Send via WhatsApp — Cloud API first, then Web fallback
+    let waMessageId: string | null = null;
+    if (hasCloudAPI) {
+      waMessageId = await whatsappService.sendMessage(phoneNumber, aiResult.content, credentials!);
+    } else if (hasWebSession) {
+      waMessageId = await whatsappWebService.sendMessage(botConfig.id, phoneNumber, aiResult.content);
+    }
 
     // Store bot response
     const botMessage = await prisma.message.create({

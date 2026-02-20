@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { conversationsController } from '../controllers/conversations.controller';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/rbac';
+import { requireActiveSubscription } from '../middleware/subscription';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(requireActiveSubscription);
 
 router.get('/', (req, res, next) => conversationsController.list(req, res, next));
 router.get('/:id', (req, res, next) => conversationsController.getById(req, res, next));

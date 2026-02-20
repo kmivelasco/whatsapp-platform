@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { analyticsController } from '../controllers/analytics.controller';
 import { authenticate } from '../middleware/auth';
+import { requireActiveSubscription } from '../middleware/subscription';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(requireActiveSubscription);
 
 router.get('/summary', (req, res, next) => analyticsController.getSummary(req, res, next));
 router.get('/tokens', (req, res, next) => analyticsController.getTokenUsage(req, res, next));

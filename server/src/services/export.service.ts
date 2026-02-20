@@ -2,12 +2,16 @@ import PDFDocument from 'pdfkit';
 import { prisma } from '../config/database';
 
 export class ExportService {
-  async exportConversationsCSV(filters: { from?: string; to?: string }) {
+  async exportConversationsCSV(filters: { from?: string; to?: string }, organizationId?: string) {
     const where: any = {};
     if (filters.from || filters.to) {
       where.createdAt = {};
       if (filters.from) where.createdAt.gte = new Date(filters.from);
       if (filters.to) where.createdAt.lte = new Date(filters.to);
+    }
+    // Tenant isolation: filter by organization through client
+    if (organizationId) {
+      where.client = { organizationId };
     }
 
     const conversations = await prisma.conversation.findMany({
@@ -41,7 +45,15 @@ export class ExportService {
     return rows.join('\n');
   }
 
-  async exportMessagesCSV(conversationId: string) {
+  async exportMessagesCSV(conversationId: string, organizationId?: string) {
+    // Tenant isolation: verify conversation belongs to org
+    if (organizationId) {
+      const conversation = await prisma.conversation.findFirst({
+        where: { id: conversationId, client: { organizationId } },
+      });
+      if (!conversation) throw new Error('Conversation not found');
+    }
+
     const messages = await prisma.message.findMany({
       where: { conversationId },
       include: { conversation: { include: { client: true } } },
@@ -67,12 +79,16 @@ export class ExportService {
     return rows.join('\n');
   }
 
-  async exportAnalyticsCSV(filters: { from?: string; to?: string }) {
+  async exportAnalyticsCSV(filters: { from?: string; to?: string }, organizationId?: string) {
     const where: any = {};
     if (filters.from || filters.to) {
       where.createdAt = {};
       if (filters.from) where.createdAt.gte = new Date(filters.from);
       if (filters.to) where.createdAt.lte = new Date(filters.to);
+    }
+    // Tenant isolation: filter through conversation → client → organization
+    if (organizationId) {
+      where.conversation = { client: { organizationId } };
     }
 
     const usages = await prisma.tokenUsage.findMany({
@@ -103,9 +119,15 @@ export class ExportService {
     return rows.join('\n');
   }
 
-  async exportConversationPDF(conversationId: string): Promise<Buffer> {
-    const conversation = await prisma.conversation.findUnique({
-      where: { id: conversationId },
+  async exportConversationPDF(conversationId: string, organizationId?: string): Promise<Buffer> {
+    const whereClause: any = { id: conversationId };
+    // Tenant isolation: verify conversation belongs to org
+    if (organizationId) {
+      whereClause.client = { organizationId };
+    }
+
+    const conversation = await prisma.conversation.findFirst({
+      where: whereClause,
       include: {
         client: true,
         messages: { orderBy: { timestamp: 'asc' } },

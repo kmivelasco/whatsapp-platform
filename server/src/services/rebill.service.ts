@@ -54,8 +54,8 @@ export const rebillService = {
         },
         paymentMethods: [
           {
-            methods: ['card', 'bank_transfer'],
-            currency: 'USD',
+            methods: ['card'],
+            currency: 'ARS',
           },
         ],
         redirectUrls: {
