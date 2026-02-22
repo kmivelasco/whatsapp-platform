@@ -205,13 +205,14 @@ class WhatsAppWebService {
         const contactName = msg.pushName || undefined;
         const messageId = msg.key.id || `web_${Date.now()}`;
 
-        console.log(`[WA-Web] Message from ${from}: ${text.substring(0, 50)}...`);
+        console.log(`[WA-Web] Message from ${from} (jid: ${jid}): ${text.substring(0, 50)}...`);
 
         // Process through the same bot pipeline
         try {
           await this.processIncomingWebMessage({
             botConfigId,
             from,
+            replyJid: jid, // Keep original JID for sending replies
             messageId,
             text,
             contactName,
@@ -227,12 +228,13 @@ class WhatsAppWebService {
   private async processIncomingWebMessage(params: {
     botConfigId: string;
     from: string;
+    replyJid: string; // Full JID for sending replies (may be @lid or @s.whatsapp.net)
     messageId: string;
     text: string;
     contactName?: string;
     timestamp: string;
   }) {
-    const { botConfigId, from, messageId, text, contactName, timestamp } = params;
+    const { botConfigId, from, replyJid, messageId, text, contactName, timestamp } = params;
 
     const botConfig = await prisma.botConfig.findUnique({
       where: { id: botConfigId },
@@ -291,7 +293,8 @@ class WhatsAppWebService {
 
     // If BOT mode, generate AI response and send via WhatsApp Web
     if (conversation.mode === 'BOT') {
-      await this.generateAndSendBotResponse(conversation.id, from, botConfig);
+      console.log(`[WA-Web] Generating bot response for conv ${conversation.id}, replyJid: ${replyJid}`);
+      await this.generateAndSendBotResponse(conversation.id, replyJid, botConfig);
     }
   }
 
@@ -321,14 +324,16 @@ class WhatsAppWebService {
     }
 
     // Generate AI response
+    console.log(`[WA-Web] Calling OpenAI for conv ${conversationId}...`);
     const aiResult = await openaiService.generateResponse({
       messages,
       model: botConfig.model,
       temperature: botConfig.temperature,
       maxTokens: botConfig.maxTokens,
     });
+    console.log(`[WA-Web] AI response generated (${aiResult.content.length} chars)`);
 
-    // Send via WhatsApp Web
+    // Send via WhatsApp Web — phoneNumber is now the full JID
     const waMessageId = await this.sendMessage(botConfig.id, phoneNumber, aiResult.content);
 
     // Store bot response
@@ -361,8 +366,11 @@ class WhatsAppWebService {
     }
 
     try {
+      // Use full JID if provided, otherwise construct it
       const jid = to.includes('@') ? to : `${to}@s.whatsapp.net`;
+      console.log(`[WA-Web] Sending message to JID: ${jid}`);
       const result = await session.socket.sendMessage(jid, { text });
+      console.log(`[WA-Web] Message sent, id: ${result?.key?.id}`);
       return result?.key?.id || null;
     } catch (err) {
       console.error('[WA-Web] Error sending message:', err);
