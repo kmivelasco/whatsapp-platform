@@ -20,6 +20,11 @@ import whatsappWebRoutes from './routes/whatsappWeb.routes';
 
 const app = express();
 
+// Trust proxy (behind Caddy reverse proxy)
+if (env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Security
 app.use(helmet({
   contentSecurityPolicy: env.NODE_ENV === 'production' ? {
