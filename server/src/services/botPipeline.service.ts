@@ -1,7 +1,7 @@
 import { BotConfig } from '@prisma/client';
 import { prisma } from '../config/database';
 import { getIO } from '../config/socket';
-import { openaiService } from './openai.service';
+import { llmService, AiProvider } from './llm.service';
 import { whatsappService, ParsedIncomingMessage } from './whatsapp.service';
 import { whatsappWebService } from './whatsappWeb.service';
 import { conversationService } from './conversation.service';
@@ -134,12 +134,14 @@ export class BotPipelineService {
       });
     }
 
-    // Generate AI response
-    const aiResult = await openaiService.generateResponse({
+    // Generate AI response using configured provider
+    const aiResult = await llmService.generateResponse({
       messages,
       model: botConfig.model,
       temperature: botConfig.temperature,
       maxTokens: botConfig.maxTokens,
+      provider: (botConfig.aiProvider as AiProvider) || 'openai',
+      apiKey: botConfig.aiApiKey || null,
     });
 
     // Send via WhatsApp — Cloud API first, then Web fallback
@@ -161,7 +163,7 @@ export class BotPipelineService {
     });
 
     // Record token usage
-    await openaiService.recordTokenUsage(conversationId, botMessage.id, aiResult);
+    await llmService.recordTokenUsage(conversationId, botMessage.id, aiResult);
 
     // Emit real-time event
     const io = getIO();

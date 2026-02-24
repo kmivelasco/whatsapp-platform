@@ -157,6 +157,8 @@ model BotConfig {
   id                        String       @id @default(cuid())
   name                      String
   systemPrompt              String       @map("system_prompt") @db.Text
+  aiProvider                String       @default("openai") @map("ai_provider")
+  aiApiKey                  String?      @map("ai_api_key") @db.Text
   model                     String       @default("gpt-4o")
   temperature               Float        @default(0.7)
   maxTokens                 Int          @default(1024) @map("max_tokens")

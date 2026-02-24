@@ -7,7 +7,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(16),
   JWT_EXPIRES_IN: z.string().default('7d'),
-  OPENAI_API_KEY: z.string().min(1),
+  OPENAI_API_KEY: z.string().optional().default(''),
   OPENAI_DEFAULT_MODEL: z.string().default('gpt-4o'),
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

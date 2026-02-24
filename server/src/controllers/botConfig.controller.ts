@@ -60,6 +60,8 @@ export class BotConfigController {
         data: {
           name: input.name,
           systemPrompt: input.systemPrompt,
+          aiProvider: input.aiProvider,
+          aiApiKey: input.aiApiKey,
           model: input.model,
           temperature: input.temperature,
           maxTokens: input.maxTokens,

@@ -122,10 +122,23 @@ function BotConfigTab() {
 
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: '', systemPrompt: '', model: 'gpt-4o', temperature: 0.7, maxTokens: 1024,
+    name: '', systemPrompt: '', aiProvider: 'openai' as 'openai' | 'anthropic', aiApiKey: '',
+    model: 'gpt-4o', temperature: 0.7, maxTokens: 1024,
     organizationId: '',
     whatsappPhoneNumberId: '', whatsappApiToken: '', whatsappVerifyToken: '', whatsappBusinessAccountId: '',
   });
+
+  const openaiModels = [
+    { value: 'gpt-4o', label: 'GPT-4o' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+  ];
+  const anthropicModels = [
+    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
+    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { value: 'claude-haiku-4-20250506', label: 'Claude Haiku 4' },
+  ];
+  const availableModels = form.aiProvider === 'anthropic' ? anthropicModels : openaiModels;
 
   const { data: configs } = useQuery({
     queryKey: ['bot-configs'],
@@ -162,7 +175,8 @@ function BotConfigTab() {
 
   const handleNew = () => {
     setForm({
-      name: '', systemPrompt: '', model: 'gpt-4o', temperature: 0.7, maxTokens: 1024,
+      name: '', systemPrompt: '', aiProvider: 'openai', aiApiKey: '',
+      model: 'gpt-4o', temperature: 0.7, maxTokens: 1024,
       organizationId: '',
       whatsappPhoneNumberId: '', whatsappApiToken: '', whatsappVerifyToken: '', whatsappBusinessAccountId: '',
     });
@@ -171,8 +185,9 @@ function BotConfigTab() {
 
   const handleEdit = (config: any) => {
     setForm({
-      name: config.name, systemPrompt: config.systemPrompt, model: config.model,
-      temperature: config.temperature, maxTokens: config.maxTokens,
+      name: config.name, systemPrompt: config.systemPrompt,
+      aiProvider: config.aiProvider || 'openai', aiApiKey: config.aiApiKey || '',
+      model: config.model, temperature: config.temperature, maxTokens: config.maxTokens,
       organizationId: config.organizationId || '',
       whatsappPhoneNumberId: config.whatsappPhoneNumberId || '',
       whatsappApiToken: config.whatsappApiToken || '',
@@ -210,11 +225,30 @@ function BotConfigTab() {
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">AI Provider</label>
+              <select value={form.aiProvider} onChange={(e) => {
+                const provider = e.target.value as 'openai' | 'anthropic';
+                const defaultModel = provider === 'anthropic' ? 'claude-opus-4-20250514' : 'gpt-4o';
+                setForm({ ...form, aiProvider: provider, model: defaultModel });
+              }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {form.aiProvider === 'anthropic' ? 'Anthropic API Key' : 'OpenAI API Key'} <span className="text-gray-400 font-normal">(optional - uses server default if empty)</span>
+              </label>
+              <input type="password" value={form.aiApiKey} onChange={(e) => setForm({ ...form, aiApiKey: e.target.value })} placeholder={form.aiProvider === 'anthropic' ? 'sk-ant-...' : 'sk-...'} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
               <select value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                {availableModels.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -284,7 +318,9 @@ function BotConfigTab() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-gray-900">{config.name}</span>
-                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">{config.model}</span>
+                <span className={`px-2 py-0.5 text-xs rounded ${config.aiProvider === 'anthropic' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {config.aiProvider === 'anthropic' ? 'Claude' : 'OpenAI'} &middot; {config.model}
+                </span>
                 {config.whatsappPhoneNumberId && (
                   <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">WA Connected</span>
                 )}
