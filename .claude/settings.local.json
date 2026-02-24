@@ -22,8 +22,10 @@
       "Bash(__NEW_LINE_2ec39ab3d9ac820c__ echo \"\")",
       "Bash(git merge:*)",
       "Bash(git stash:*)",
-      "Bash(git rebase:*)",
-      "Bash(GIT_EDITOR=true git rebase:*)"
+      "Bash(git push:*)",
+      "Bash(openssl rand:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(git pull:*)"
     ]
   }
 }

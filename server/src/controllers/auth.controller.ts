@@ -35,7 +35,7 @@ export class AuthController {
       const { prisma } = await import('../config/database');
       const user = await prisma.user.findUnique({
         where: { id: req.user!.userId },
-        select: { id: true, email: true, name: true, role: true, createdAt: true },
+        select: { id: true, email: true, name: true, role: true, organizationId: true, createdAt: true },
       });
       if (!user) return next(new AppError('User not found', 404));
       res.json(user);
